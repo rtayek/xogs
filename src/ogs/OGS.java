@@ -6,6 +6,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
+import java.util.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -59,12 +60,12 @@ public class OGS {
         }
         return null;
     }
-    static void listReviews(Integer playerId) {
+    static void listReviews(List<Integer> playerIds,List<Integer> reviewers) {
         JsonNode games;
+        for(Integer playerId:playerIds)
         try {
+            System.out.println("playerId: "+playerId);
             games=getJSON(new URL("https://online-go.com/api/v1/players/"+playerId+"/games"));
-            //System.out.println("pp games: ");
-            //pp(games.toString());
             Integer page=1;
             String n=games.get("count").asText();
             System.out.println(n+" games.");
@@ -75,32 +76,42 @@ public class OGS {
                 // Get JSON array
                 if(gamesArray.isArray()) {
                     for(JsonNode game:gamesArray) {
-                        Integer id=game.get("id").asInt();
+                        Integer gameId=game.get("id").asInt();
                         String started=game.get("started").asText();
                         String ended=game.get("ended").asText();
-                        URL reviewsUrl=new URL("https://online-go.com/api/v1/games/"+id.toString()+'/'+"reviews");
+                        URL reviewsUrl=new URL("https://online-go.com/api/v1/games/"+gameId.toString()+'/'+"reviews");
                         //System.out.println("reviews url: "+reviewsUrl);
                         JsonNode reviews=getJSON(reviewsUrl);
                         if(reviews!=null) {
                             Integer count=reviews.get("count").asInt();
                             if(count==0) continue;
-                            System.out.print("game: "+id+' '+game.get("name").asText());
+                            System.out.print("game: "+gameId+' '+game.get("name").asText());
                             System.out.print(" "+started+" - "+ended);
                             System.out.println();
                             JsonNode results=reviews.get("results");
                             if(results.isArray()) {
                                 //System.out.println(reviews);
                                 for(JsonNode review:results) {
-                                    String username=review.get("owner").get("username").asText();
-                                    System.out.println("\treview: "+username);
+                                    int reviewerId=review.get("id").asInt();
+                                    JsonNode owner=review.get("owner");
+                                    String username=owner.get("username").asText();
+                                    int ownerId=owner.get("id").asInt();
+                                    //System.out.println("\tgameId: "+gameId);
+                                    //System.out.println("\treview: "+username);
                                     //System.out.println("\treview: "+review);
+                                    //System.out.println("\townerId: "+"'"+ownerId+"'");
+                                    //System.out.println("\treviewerId: "+"'"+reviewerId+"'");
+                                    if(reviewers==null||reviewers.contains(ownerId)) {
+                                        //System.out.println("\treview: "+review);
+                                        System.out.println("\treview: "+reviewerId+" by: "+username);
                                     }
+                                }
                             } else System.out.println("not an array!");
                             //System.out.println("Game ID: "+game.get("id").asInt());
                             //System.out.println("Game Name: "+game.get("name").asText());
                         } else {
                             System.out.println("reviews is null!");
-                            System.out.println("probably due to a 420. so stopping.");
+                            System.out.println("probably due to a 429. so stopping.");
                             break outer;
                         }
                     }
@@ -119,12 +130,23 @@ public class OGS {
         }
     }
     public static void main(String[] argumentss) {
-        Integer ray=179,hugh=1567393;
+        Integer rtayek=179,rtayek3=1386205,hugh=1567393;
+        Integer mag11=1476738,otherpeter=1710964;
         Integer playerId;
-        if(argumentss==null||argumentss.length==0) { playerId=hugh; listReviews(playerId); }
+        List<Integer> reviewers=null;
+        List<Integer> playerIds=null;
+        if(argumentss==null||argumentss.length==0) { //
+            playerIds=Arrays.asList(mag11,otherpeter);
+            reviewers=Arrays.asList(rtayek,rtayek3);
+            
+            System.out.println("reviews by: "+reviewers);
+            listReviews(playerIds,reviewers);
+        }
         for(String argument:argumentss) {
             playerId=Integer.valueOf(argument);
-            listReviews(playerId);
+            System.out.println("reviews by: "+reviewers);
+            playerIds=Arrays.asList(playerId);
+            listReviews(playerIds,reviewers);
         }
     }
 }
